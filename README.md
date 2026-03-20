@@ -1,137 +1,117 @@
-# Home Network Security Assessment – iPhone Exposure and Traffic Analysis
+# Home Network Security Assessment – iPhone Exposure and Traffic Analysis (FULL RAW WALKTHROUGH)
 
-## Project Goal
+## Step 1 – Network Context (Kali WSL2)
 
-The purpose of this walkthrough was to assess whether an iPhone on a home network showed:
-
-- unnecessary network exposure
-- suspicious listening services
-- abnormal traffic behavior
-- possible signs of spyware-like activity at the network level
-
----
-
-## Tools Used
-- Kali Linux (WSL2)
-- Windows PowerShell
-- Nmap
-- PktMon
-
----
-
-## Step 1 – Identify Network Context
-
-Command:
+### Command
 ip a
 
-Result:
-WSL2 interface detected (172.x.x.x) → NOT same as home network (192.168.x.x)
+### Raw Output
+inet 172.23.143.138/20 brd 172.23.143.255 scope global eth0
 
-Conclusion:
-WSL2 is isolated → cannot fully monitor LAN traffic
+### Analysis
+WSL2 uses a virtual network (172.x.x.x), not the real LAN (192.168.x.x).
+This means Kali cannot directly observe Wi-Fi traffic from the iPhone.
 
 ---
 
-## Step 2 – Identify Devices on Network
+## Step 2 – Identify Devices (Windows)
 
-Command:
+### Command
 arp -a
 
-Key finding:
-192.168.1.153 → iPhone
+### Raw Output
+Interface: 192.168.1.158
+192.168.1.1
+192.168.1.160
+
+### Analysis
+Identified active LAN devices.
+iPhone later confirmed manually as 192.168.1.153.
 
 ---
 
-## Step 3 – Scan iPhone
+## Step 3 – Nmap Scan
 
-Command:
+### Command
 nmap -sS -sV -O 192.168.1.153
 
-Result:
-- 998 closed ports
-- 49152/tcp open (tcpwrapped)
-- 62078/tcp open (tcpwrapped)
-- OS: iOS 15.x (estimated)
+### Raw Output
+PORT      STATE SERVICE    VERSION
+49152/tcp open  tcpwrapped
+62078/tcp open  tcpwrapped
 
-Conclusion:
-Minimal exposure, typical iPhone behavior
+OS details: Apple iOS 15.x
+
+### Analysis
+- Only 2 open ports
+- Both tcpwrapped → restricted access
+- Minimal attack surface
 
 ---
 
-## Step 4 – Monitor Connections (Windows)
+## Step 4 – Active Connections
 
-Command:
+### Command
 netstat -ano
 
-Result:
-- Multiple HTTPS connections (:443)
-- Normal outbound traffic
+### Raw Output
+Multiple connections to :443 (HTTPS)
 
-Conclusion:
-No obvious suspicious connections
+### Analysis
+Normal encrypted traffic behavior.
 
 ---
 
-## Step 5 – Packet Capture (PktMon)
+## Step 5 – Packet Capture
 
-Commands:
+### Commands
 pktmon filter remove
 pktmon filter add -i 192.168.1.153
 pktmon start --capture --pkt-size 0
 
-User activity:
-- YouTube
-- Safari
-- Google browsing
+### Activity
+YouTube, Safari browsing
 
-Stop capture:
+### Stop
 pktmon stop
 
-Convert:
+### Convert
 pktmon etl2txt PktMon.etl -o capture.txt
 
-Result:
-~1400 events captured
+### Raw Output
+Events formatted: 1403
+
+### Analysis
+Successful packet capture.
 
 ---
 
 ## Step 6 – Packet Analysis
 
-Observed:
-- ARP requests (router → iPhone)
-- Normal LAN communication
-- No suspicious outbound patterns
+### Raw Output
+ARP request: who-has 192.168.1.153 tell 192.168.1.1
 
-Example:
-Request who-has 192.168.1.153 tell 192.168.1.1
-
-Conclusion:
-Normal network behavior
+### Analysis
+- Normal ARP communication
+- No suspicious traffic patterns observed
 
 ---
 
 ## Final Conclusion
 
-The iPhone showed:
-
-- minimal exposed services
-- normal ARP communication
-- no visible suspicious traffic patterns
-
-No evidence of spyware was observed at the network level during this assessment.
+No evidence of spyware detected at network level.
+Behavior consistent with normal iPhone usage.
 
 ---
 
-## Key Lessons
+## Key Technical Lessons
 
-- Always verify network context (WSL vs LAN)
-- ARP is critical for device identification
-- Nmap shows exposure, not infection
-- Packet capture depends on correct interface
-- Tool limitations are part of real-world analysis
+- WSL2 ≠ LAN visibility
+- ARP confirms device presence
+- Nmap reveals exposure, not compromise
+- Packet capture requires correct interface
 
 ---
 
 ## Author
-
 Tomasz (Tomason34)
